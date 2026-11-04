@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { SearchConfig } from '../config/search-config.schema';
 import { AdzunaSource } from './adzuna.source';
+import { GoogleJobsSource } from './google-jobs.source';
 import { JoobleSource } from './jooble.source';
 
 const realFetch = globalThis.fetch;
@@ -35,6 +36,28 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.fetch = realFetch;
   process.env = { ...envBackup };
+});
+
+test('Google Jobs reads date, salary, schedule and remote from the plain extensions list', async () => {
+  process.env.SERPAPI_KEY = 'k';
+  process.env.GOOGLE_MAX_SEARCHES_PER_RUN = '1';
+  const googleJob = { job_id: '1', title: 'React Developer', company_name: 'Acme', location: 'Dubai - United Arab Emirates', share_link: 'https://x' };
+  fakeApi({
+    jobs_results: [
+      { ...googleJob, extensions: ['7 days ago', 'AED 4K–AED 5K a month', 'Full-time'] },
+      { ...googleJob, job_id: '2', extensions: ['Work from home', 'Full-time', 'No degree mentioned'], detected_extensions: { qualifications: 'No degree mentioned' } },
+    ],
+  });
+  const before = Date.now();
+  const [dated, remote] = await new GoogleJobsSource().fetchJobs({ ...config, googleLocations: ['United Arab Emirates'] } as SearchConfig);
+  const ageDays = (before - dated.postedAt!.getTime()) / 8.64e7;
+  assert.ok(Math.abs(ageDays - 7) < 0.01);
+  assert.equal(dated.salary, 'AED 4K–AED 5K a month');
+  assert.equal(dated.tags[0], 'Full-time');
+  assert.equal(dated.isRemote, false);
+  assert.equal(remote.isRemote, true);
+  assert.equal(remote.postedAt, undefined);
+  assert.equal(remote.salary, undefined);
 });
 
 test('Jooble "Remote" search asks for remote jobs but does not trust the search', async () => {

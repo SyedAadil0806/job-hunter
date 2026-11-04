@@ -20,6 +20,19 @@ interface GoogleJob {
   apply_options?: { title: string; link: string }[];
 }
 
+/** SerpApi often leaves detected_extensions empty and only fills the plain extensions list. */
+function readExtensions(j: GoogleJob) {
+  const list = j.extensions ?? [];
+  const found = (pattern: RegExp) => list.find((e) => pattern.test(e));
+  const det = j.detected_extensions ?? {};
+  return {
+    posted_at: det.posted_at ?? found(/\bago\b|\btoday\b|\bjust\b/i),
+    schedule_type: det.schedule_type ?? found(/full.?time|part.?time|contract|intern|temporary/i),
+    work_from_home: det.work_from_home ?? Boolean(found(/work from home|remote/i)),
+    salary: det.salary ?? found(/\ban? (hour|day|week|month|year)\b/i),
+  };
+}
+
 /**
  * Google Jobs through SerpApi (serpapi.com, free plan has a small monthly
  * search limit). Google Jobs pulls listings from LinkedIn, Bayt, GulfTalent,
@@ -55,7 +68,7 @@ export class GoogleJobsSource implements JobSource {
       });
       const data = await fetchJson<{ jobs_results?: GoogleJob[] }>(`https://serpapi.com/search.json?${params}`);
       for (const j of data.jobs_results ?? []) {
-        const ext = j.detected_extensions ?? {};
+        const ext = readExtensions(j);
         // Prefer a direct company link over job-board middlemen.
         const apply = j.apply_options ?? [];
         const best = apply.find((a) => !/linkedin|indeed|glassdoor|bayt/i.test(a.title)) ?? apply[0];
