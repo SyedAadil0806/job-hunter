@@ -36,8 +36,15 @@ async function main() {
       appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
     }
 
-    const digest = buildDigest({ newlyReady: result.newlyReady, errors: result.errors, dashboardUrl: process.env.DASHBOARD_URL });
-    if (digest) await sendTelegram(digest);
+    await sendTelegram(
+      buildDigest({
+        newJobs: result.newJobs,
+        newlyReady: result.newlyReady,
+        errors: result.errors,
+        tailorRan: steps.includes('tailor'),
+        dashboardUrl: process.env.DASHBOARD_URL,
+      }),
+    );
   } finally {
     await app.close();
   }

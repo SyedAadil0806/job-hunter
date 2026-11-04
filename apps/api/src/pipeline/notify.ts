@@ -6,22 +6,28 @@ export interface DigestJob {
 }
 
 export interface DigestInput {
+  newJobs: number;
   newlyReady: DigestJob[];
   errors: string[];
+  /** False when this run skipped the CV step, so "none good enough" wouldn't be true. */
+  tailorRan: boolean;
   dashboardUrl?: string;
 }
 
 const MAX_JOBS = 15;
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** The morning message, or null when there is nothing worth a notification. */
-export function buildDigest({ newlyReady, errors, dashboardUrl }: DigestInput): string | null {
+/** The message sent after every run. */
+export function buildDigest({ newJobs, newlyReady, errors, tailorRan, dashboardUrl }: DigestInput): string {
   const waiting = errors.some((e) => /quota/i.test(e));
   const otherProblems = errors.filter((e) => !/quota/i.test(e)).length;
-  if (!newlyReady.length && !waiting && !otherProblems) return null;
 
   const lines: string[] = [];
-  if (newlyReady.length) {
+  if (!newlyReady.length) {
+    const found = newJobs === 0 ? 'no new jobs' : `${newJobs} new ${newJobs === 1 ? 'job' : 'jobs'}`;
+    const outcome = errors.length || !tailorRan ? 'no new CVs' : newJobs === 0 ? '' : 'none good enough for a CV';
+    lines.push(`✅ Run finished: ${[found, outcome].filter(Boolean).join(', ')}`);
+  } else {
     lines.push(`🎯 <b>${newlyReady.length} new ${newlyReady.length === 1 ? 'job' : 'jobs'} ready</b>`);
     for (const j of newlyReady.slice(0, MAX_JOBS)) {
       lines.push(`${j.score ?? '-'} – ${escapeHtml(j.title)} @ ${escapeHtml(j.company)}, ${escapeHtml(j.location)}`);

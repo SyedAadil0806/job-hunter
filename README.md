@@ -94,7 +94,7 @@ Vercel → **Add New Project** → pick the repo → set **Root Directory** to `
 
 ### 6. Telegram message and phone app (optional)
 
-Create a bot with [@BotFather](https://t.me/BotFather), put its token in `apps/api/.env` as `TELEGRAM_BOT_TOKEN`, send the bot "hi", then run `npm run telegram:setup` to get your chat id. Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as GitHub secrets and `DASHBOARD_URL` as a GitHub variable. You get a message when new CVs are ready or something goes wrong, and nothing on quiet days.
+Create a bot with [@BotFather](https://t.me/BotFather), put its token in `apps/api/.env` as `TELEGRAM_BOT_TOKEN`, send the bot "hi", then run `npm run telegram:setup` to get your chat id. Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as GitHub secrets and `DASHBOARD_URL` as a GitHub variable. You get a message after every run: the new CVs if there are any, otherwise what the run found, plus any problems.
 
 To install the dashboard on Android, open it in Chrome, tap the ⋮ menu, then **Add to Home screen** or **Install app**.
 
