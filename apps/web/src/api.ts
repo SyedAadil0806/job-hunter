@@ -104,6 +104,8 @@ export const api = {
   check: (t: string) => raw('/stats', {}, t).then(() => true),
   stats: () => json<Stats>('/stats'),
   sources: () => json<Record<string, string>>('/sources'),
+  runNowStatus: () => json<{ enabled: boolean; running: boolean }>('/run-now'),
+  runNow: () => json<{ started: true }>('/run-now', { method: 'POST' }),
   jobs: (params: { status?: JobStatus; minScore?: number; q?: string }) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => v !== undefined && v !== '' && qs.set(k, String(v)));

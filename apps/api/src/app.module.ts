@@ -9,6 +9,8 @@ import { CollectorService } from './jobs/collector.service';
 import { JobsController } from './jobs/jobs.controller';
 import { LivenessService } from './jobs/liveness.service';
 import { PipelineService } from './pipeline/pipeline.service';
+import { RunNowController } from './pipeline/run-now.controller';
+import { RunNowService } from './pipeline/run-now.service';
 import { PrismaModule } from './prisma/prisma.service';
 
 // apps/api/.env first, then a repo-level .env if you keep one there.
@@ -25,7 +27,7 @@ export class PipelineModule {}
 /** The HTTP API used by the dashboard. */
 @Module({
   imports: [PipelineModule],
-  controllers: [JobsController],
-  providers: [{ provide: APP_GUARD, useClass: TokenGuard }],
+  controllers: [JobsController, RunNowController],
+  providers: [RunNowService, { provide: APP_GUARD, useClass: TokenGuard }],
 })
 export class AppModule {}

@@ -98,6 +98,10 @@ Create a bot with [@BotFather](https://t.me/BotFather), put its token in `apps/a
 
 To install the dashboard on Android, open it in Chrome, tap the ⋮ menu, then **Add to Home screen** or **Install app**.
 
+### 7. "Run now" button (optional)
+
+Create a [fine-grained GitHub token](https://github.com/settings/personal-access-tokens/new) with access to only this repo and **Actions: Read and write**. On Render, add `GITHUB_DISPATCH_TOKEN` (the token) and `GITHUB_REPO` (`your-name/job-hunter`). The button then appears in the dashboard.
+
 ## Daily use
 
 1. Open the dashboard → **Ready to apply**.

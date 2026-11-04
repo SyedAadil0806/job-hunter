@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, Stats, token } from './api';
 import { JobsView } from './components/JobsView';
 import { Login } from './components/Login';
+import { RunNow } from './components/RunNow';
 import { Tracker } from './components/Tracker';
 
 type Tab = 'ready' | 'matches' | 'skipped' | 'tracker';
@@ -67,6 +68,7 @@ export function App() {
             )}
           </p>
         )}
+        <RunNow onFinished={refreshStats} />
         <button
           className="btn ghost small"
           onClick={() => {
