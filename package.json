@@ -1,0 +1,24 @@
+{
+  "name": "job-hunter",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Finds jobs every day, scores them against your CV with AI (Gemini free or Claude), tailors a CV + cover letter for the best ones, and tracks what you applied to.",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "pipeline": "npm run pipeline -w apps/api",
+    "ai:check": "npm run ai:check -w apps/api",
+    "db:push": "npm run db:push -w apps/api",
+    "test": "npm test -w apps/api",
+    "cv:secret": "node scripts/cv-secret.mjs",
+    "typecheck": "npm run typecheck -w apps/api && npm run typecheck -w apps/web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

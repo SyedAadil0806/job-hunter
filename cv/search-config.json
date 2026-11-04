@@ -1,0 +1,92 @@
+{
+  "queries": [
+    "react developer",
+    "full stack developer",
+    "frontend developer",
+    "nestjs developer",
+    "junior software engineer",
+    "react native developer",
+    "automation developer n8n",
+    "finance automation"
+  ],
+  "titleMustInclude": [
+    "react",
+    "frontend",
+    "front-end",
+    "front end",
+    "full stack",
+    "full-stack",
+    "fullstack",
+    "software engineer",
+    "software developer",
+    "web developer",
+    "javascript",
+    "typescript",
+    "node",
+    "nestjs",
+    "next.js",
+    "nextjs",
+    "react native",
+    "mobile developer",
+    "backend",
+    "back-end",
+    "automation",
+    "n8n",
+    "integration developer",
+    "integration engineer",
+    "workflow",
+    "rpa"
+  ],
+  "titleExclude": [
+    "senior",
+    "sr.",
+    "sr ",
+    "lead",
+    "principal",
+    "staff",
+    "head of",
+    "director",
+    "manager",
+    "architect",
+    "10+",
+    "8+",
+    "7+"
+  ],
+  "descriptionExclude": [
+    "us citizens only",
+    "must be a us citizen",
+    "security clearance",
+    "eu work permit required"
+  ],
+  "onsiteLocations": [
+    "united arab emirates",
+    "uae",
+    "u.a.e",
+    "dubai",
+    "sharjah",
+    "abu dhabi",
+    "ajman",
+    "umm al quwain",
+    "ras al khaimah",
+    "fujairah",
+    "al ain"
+  ],
+  "remoteRegionExclude": [
+    "usa only",
+    "us only",
+    "united states only",
+    "canada only",
+    "uk only",
+    "europe only",
+    "eu only"
+  ],
+  "googleLocations": ["United Arab Emirates"],
+  "adzunaCountries": ["gb", "nl", "de"],
+  "joobleLocations": ["Dubai", "Abu Dhabi", "Sharjah", "Remote"],
+  "limits": {
+    "maxScorePerRun": 60,
+    "maxTailorPerRun": 10,
+    "minScoreToTailor": 70,
+    "maxJobAgeDays": 21
+  }
+}

@@ -1,0 +1,29 @@
+# Render Blueprint: free web service for the NestJS API.
+# Render > New > Blueprint > pick this repo. Then fill in the secret values.
+services:
+  - type: web
+    name: job-hunter-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    # --include=dev: Render sets NODE_ENV=production, which would skip the TypeScript compiler.
+    buildCommand: npm ci --include=dev && npm run build -w apps/api
+    startCommand: npm run start:prod -w apps/api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: DATABASE_URL
+        sync: false
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_TAILOR_MODEL
+        value: gemini-3.5-flash
+      - key: BASE_CV_JSON
+        sync: false
+      - key: DASHBOARD_TOKEN
+        generateValue: true
+      - key: WEB_ORIGIN
+        sync: false

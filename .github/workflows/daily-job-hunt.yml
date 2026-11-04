@@ -1,0 +1,69 @@
+name: Daily job hunt
+
+on:
+  schedule:
+    # 03:17 UTC = 07:17 in the UAE, every day
+    - cron: '17 3 * * *'
+  # Lets you press "Run workflow" on GitHub any time
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: 'Steps to run (comma-separated: collect,score,tailor)'
+        required: false
+        default: 'collect,score,tailor'
+
+concurrency:
+  group: daily-job-hunt
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      AI_PROVIDER: ${{ vars.AI_PROVIDER || 'gemini' }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      BASE_CV_JSON: ${{ secrets.BASE_CV_JSON }}
+      SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+      JOOBLE_API_KEY: ${{ secrets.JOOBLE_API_KEY }}
+      ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+      ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+      GOOGLE_MAX_SEARCHES_PER_RUN: ${{ vars.GOOGLE_MAX_SEARCHES_PER_RUN || '3' }}
+      GEMINI_SCORE_MODEL: ${{ vars.GEMINI_SCORE_MODEL }}
+      GEMINI_TAILOR_MODEL: ${{ vars.GEMINI_TAILOR_MODEL }}
+      CLAUDE_SCORE_MODEL: ${{ vars.CLAUDE_SCORE_MODEL }}
+      CLAUDE_TAILOR_MODEL: ${{ vars.CLAUDE_TAILOR_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check secrets
+        run: |
+          missing=""
+          for v in DATABASE_URL BASE_CV_JSON; do
+            if [ -z "${!v}" ]; then missing="$missing $v"; fi
+          done
+          if [ "$AI_PROVIDER" = "claude" ] && [ -z "$ANTHROPIC_API_KEY" ]; then missing="$missing ANTHROPIC_API_KEY"; fi
+          if [ "$AI_PROVIDER" != "claude" ] && [ -z "$GEMINI_API_KEY" ]; then missing="$missing GEMINI_API_KEY"; fi
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (Settings > Secrets and variables > Actions)"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Make sure database tables exist
+        working-directory: apps/api
+        run: npx prisma db push --skip-generate
+
+      - name: Find, score and tailor
+        working-directory: apps/api
+        env:
+          STEPS: ${{ github.event.inputs.steps || 'collect,score,tailor' }}
+        run: npm run pipeline -- "--only=$STEPS"

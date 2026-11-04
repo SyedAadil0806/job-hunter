@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+
+# Your real CV stays out of git. Use a GitHub secret (BASE_CV_JSON) for the daily run.
+cv/base-cv.json
+output/
