@@ -56,9 +56,9 @@ export class GoogleJobsSource implements JobSource {
   async fetchJobs(config: SearchConfig): Promise<RawJob[]> {
     const maxSearches = Number(process.env.GOOGLE_MAX_SEARCHES_PER_RUN ?? 3);
     const combos = config.googleLocations.flatMap((location) => config.queries.map((q) => ({ q, location })));
-    // Rotate through the combos day by day so all queries get used over a week.
-    const day = Math.floor(Date.now() / 8.64e7);
-    const picked = Array.from({ length: Math.min(maxSearches, combos.length) }, (_, i) => combos[(day * maxSearches + i) % combos.length]);
+    // Move on every 12 hours, so the morning and evening runs search for different things.
+    const halfDay = Math.floor(Date.now() / 4.32e7);
+    const picked = Array.from({ length: Math.min(maxSearches, combos.length) }, (_, i) => combos[(halfDay * maxSearches + i) % combos.length]);
 
     const out: RawJob[] = [];
     for (const { q, location } of picked) {

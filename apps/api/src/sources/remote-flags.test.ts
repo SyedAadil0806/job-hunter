@@ -60,6 +60,28 @@ test('Google Jobs reads date, salary, schedule and remote from the plain extensi
   assert.equal(remote.salary, undefined);
 });
 
+test('Google Jobs morning and evening runs use different searches, and all get used', async (t) => {
+  process.env.SERPAPI_KEY = 'k';
+  process.env.GOOGLE_MAX_SEARCHES_PER_RUN = '3';
+  const queries = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const searched: string[] = [];
+  globalThis.fetch = (async (input: any) => {
+    searched.push(new URL(String(input)).searchParams.get('q')!);
+    return new Response(JSON.stringify({ jobs_results: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+  const start = Date.UTC(2026, 10, 5, 3, 17);
+  const runs: string[][] = [];
+  for (let run = 0; run < 4; run++) {
+    t.mock.method(Date, 'now', () => start + run * 12 * 3.6e6);
+    searched.length = 0;
+    await new GoogleJobsSource().fetchJobs({ ...config, queries, googleLocations: ['United Arab Emirates'] } as SearchConfig);
+    runs.push([...searched]);
+    t.mock.restoreAll();
+  }
+  assert.notDeepEqual(runs[0], runs[1]);
+  assert.equal(new Set(runs.flat()).size, queries.length);
+});
+
 test('Google Jobs picks the company site, then a big board, and copy sites last', async () => {
   process.env.SERPAPI_KEY = 'k';
   process.env.GOOGLE_MAX_SEARCHES_PER_RUN = '1';
