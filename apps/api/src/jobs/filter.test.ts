@@ -70,6 +70,11 @@ test('does not treat a word containing "uae" as the UAE', () => {
   assert.equal(prefilter(job({ location: 'Guaeca, Brazil' }), config, now).keep, false);
 });
 
+test('drops Emiratization roles by title or description', () => {
+  assert.equal(prefilter(job({ title: 'Junior Software Engineer (Emiratization)' }), config, now).keep, false);
+  assert.equal(prefilter(job({ description: 'Part of our Emiratisation programme.' }), config, now).keep, false);
+});
+
 test('drops old jobs and non-target titles', () => {
   assert.equal(prefilter(job({ postedAt: new Date('2026-09-01') }), config, now).keep, false);
   assert.equal(prefilter(job({ title: 'Accountant' }), config, now).keep, false);

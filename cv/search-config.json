@@ -50,13 +50,18 @@
     "architect",
     "10+",
     "8+",
-    "7+"
+    "7+",
+    "emiratization",
+    "emiratisation"
   ],
   "descriptionExclude": [
     "us citizens only",
     "must be a us citizen",
     "security clearance",
-    "eu work permit required"
+    "eu work permit required",
+    "emiratization",
+    "emiratisation",
+    "uae nationals only"
   ],
   "onsiteLocations": [
     "united arab emirates",
