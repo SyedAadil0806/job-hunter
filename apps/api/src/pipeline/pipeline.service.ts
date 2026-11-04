@@ -4,6 +4,7 @@ import { ScoringService } from '../ai/scoring.service';
 import { TailoringService } from '../ai/tailoring.service';
 import { loadBaseCv, loadSearchConfig } from '../config/profile.loader';
 import { CollectorService } from '../jobs/collector.service';
+import { LivenessService } from '../jobs/liveness.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type Step = 'collect' | 'score' | 'tailor';
@@ -15,6 +16,7 @@ export class PipelineService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly collector: CollectorService,
+    private readonly liveness: LivenessService,
     private readonly scoring: ScoringService,
     private readonly tailoring: TailoringService,
     private readonly ai: AiService,
@@ -40,9 +42,12 @@ export class PipelineService {
         errors.push(`${this.ai.disabledReason()}: skipped scoring and tailoring`);
       } else {
         if (steps.includes('score')) {
+          // Check links first, so no AI quota is spent on closed jobs.
+          const links = await this.liveness.removeDeadJobs(config.limits.maxJobAgeDays);
           const s = await this.scoring.scorePending(config.limits.maxScorePerRun);
           stats.scored = s.scored;
           errors.push(...s.errors);
+          await this.liveness.updateWarnings(links);
         }
         if (steps.includes('tailor')) {
           const t = await this.tailoring.tailorTop(config.limits.maxTailorPerRun, config.limits.minScoreToTailor);
@@ -66,7 +71,12 @@ export class PipelineService {
       take: 15,
       select: { title: true, company: true, location: true, score: true, url: true },
     });
+    const newlyReady = await this.prisma.job.findMany({
+      where: { status: 'READY', cvVersions: { some: { createdAt: { gte: run.startedAt } } } },
+      orderBy: { score: 'desc' },
+      select: { title: true, company: true, location: true, score: true },
+    });
     this.log.log(`done: ${JSON.stringify(stats)}${errors.length ? `, ${errors.length} warnings` : ''}`);
-    return { ...stats, errors, ready };
+    return { ...stats, errors, ready, newlyReady };
   }
 }

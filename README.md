@@ -92,6 +92,12 @@ Free Render services sleep when idle, so the first request after a while takes a
 
 Vercel → **Add New Project** → pick the repo → set **Root Directory** to `apps/web` → add env var `VITE_API_URL` = your Render URL → Deploy. Open the site and paste your `DASHBOARD_TOKEN`.
 
+### 6. Telegram message and phone app (optional)
+
+Create a bot with [@BotFather](https://t.me/BotFather), put its token in `apps/api/.env` as `TELEGRAM_BOT_TOKEN`, send the bot "hi", then run `npm run telegram:setup` to get your chat id. Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as GitHub secrets and `DASHBOARD_URL` as a GitHub variable. You get a message when new CVs are ready or something goes wrong, and nothing on quiet days.
+
+To install the dashboard on Android, open it in Chrome, tap the ⋮ menu, then **Add to Home screen** or **Install app**.
+
 ## Daily use
 
 1. Open the dashboard → **Ready to apply**.

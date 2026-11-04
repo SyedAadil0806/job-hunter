@@ -20,6 +20,9 @@ interface GoogleJob {
   apply_options?: { title: string; link: string }[];
 }
 
+const BIG_BOARDS = /linkedin|indeed|glassdoor|bayt|gulftalent|naukrigulf/i;
+const COPY_SITES = /jooble|jobrapido|expertini|learn4good|bebee|hirelala|jobilize|whatjobs|talent\.com|jobgether|jora\b/i;
+
 /** SerpApi often leaves detected_extensions empty and only fills the plain extensions list. */
 function readExtensions(j: GoogleJob) {
   const list = j.extensions ?? [];
@@ -69,9 +72,13 @@ export class GoogleJobsSource implements JobSource {
       const data = await fetchJson<{ jobs_results?: GoogleJob[] }>(`https://serpapi.com/search.json?${params}`);
       for (const j of data.jobs_results ?? []) {
         const ext = readExtensions(j);
-        // Prefer a direct company link over job-board middlemen.
+        // Company site first, then big job boards. Sites that copy other boards' posts go last,
+        // because their links go stale most often.
         const apply = j.apply_options ?? [];
-        const best = apply.find((a) => !/linkedin|indeed|glassdoor|bayt/i.test(a.title)) ?? apply[0];
+        const best =
+          apply.find((a) => !BIG_BOARDS.test(a.title) && !COPY_SITES.test(a.title)) ??
+          apply.find((a) => BIG_BOARDS.test(a.title)) ??
+          apply[0];
         out.push({
           source: this.name,
           externalId: j.job_id.slice(0, 180),

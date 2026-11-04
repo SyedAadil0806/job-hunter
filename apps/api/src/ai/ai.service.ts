@@ -138,6 +138,11 @@ export class AiService {
               temperature: req.task === 'score' ? 0.2 : 0.5,
             },
           });
+          const usage = res.usageMetadata;
+          this.log.log(
+            `${req.task} on ${model}: tokens in ${usage?.promptTokenCount ?? '?'}, out ${usage?.candidatesTokenCount ?? '?'}, ` +
+              `thinking ${usage?.thoughtsTokenCount ?? 0}, total ${usage?.totalTokenCount ?? '?'}`,
+          );
           const text = res.text;
           if (!text) throw new Error(`Gemini returned no text (finish=${res.candidates?.[0]?.finishReason ?? 'unknown'})`);
           try {
@@ -154,7 +159,10 @@ export class AiService {
           const daily = /per.?day|daily/i.test(msg);
           const overloaded = !rateLimited && status !== undefined && status >= 500;
           if (rateLimited && (daily || attempt >= maxAttempts)) {
-            throw new QuotaError(`Gemini free quota reached: ${msg.slice(0, 160)}`);
+            // Each model has its own free limit, so another model may still have room.
+            if (!next) throw new QuotaError(`Gemini free quota reached: ${msg.slice(0, 160)}`);
+            this.log.warn(`Gemini quota used up on ${model}, trying ${next}`);
+            break;
           }
           // Model removed (404) or still overloaded after retries: move on to the next model.
           if (status === 404 || (overloaded && attempt >= maxOverloadAttempts)) {

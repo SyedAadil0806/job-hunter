@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { appendFileSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
 import { PipelineModule } from '../app.module';
+import { buildDigest, sendTelegram } from './notify';
 import { PipelineService, Step } from './pipeline.service';
 
 /**
@@ -34,6 +35,9 @@ async function main() {
       ];
       appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
     }
+
+    const digest = buildDigest({ newlyReady: result.newlyReady, errors: result.errors, dashboardUrl: process.env.DASHBOARD_URL });
+    if (digest) await sendTelegram(digest);
   } finally {
     await app.close();
   }

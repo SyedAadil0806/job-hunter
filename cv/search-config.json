@@ -87,7 +87,7 @@
   ],
   "googleLocations": ["United Arab Emirates"],
   "adzunaCountries": ["gb", "nl", "de"],
-  "joobleLocations": ["Dubai", "Abu Dhabi", "Sharjah", "Remote"],
+  "joobleLocations": [],
   "limits": {
     "maxScorePerRun": 60,
     "maxTailorPerRun": 10,

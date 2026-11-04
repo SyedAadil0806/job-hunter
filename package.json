@@ -16,6 +16,7 @@
     "db:push": "npm run db:push -w apps/api",
     "test": "npm test -w apps/api",
     "cv:secret": "node scripts/cv-secret.mjs",
+    "telegram:setup": "node scripts/telegram-setup.mjs",
     "typecheck": "npm run typecheck -w apps/api && npm run typecheck -w apps/web"
   },
   "engines": {

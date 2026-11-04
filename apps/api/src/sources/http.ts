@@ -1,4 +1,4 @@
-const USER_AGENT = 'job-hunter/1.0 (personal job search tool)';
+export const USER_AGENT ='job-hunter/1.0 (personal job search tool)';
 
 export class HttpError extends Error {
   constructor(

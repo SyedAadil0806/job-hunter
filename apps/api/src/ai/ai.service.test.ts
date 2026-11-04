@@ -109,7 +109,16 @@ test('fails when overloaded and backups are turned off', async () => {
   assert.equal(calls.length, 3);
 });
 
+test('moves to the backup model when the main one hits its daily limit', async () => {
+  process.env.GEMINI_SCORE_MODEL = 'main-model';
+  process.env.GEMINI_FALLBACK_MODELS = 'backup-model';
+  fakeGemini((n) => (n === 1 ? { status: 429, body: { error: { code: 429, status: 'RESOURCE_EXHAUSTED', message: 'limit per day' } } } : okReply));
+  assert.deepEqual(await new AiService().structured(req), { score: 82 });
+  assert.match(calls[1].url, /backup-model:generateContent/);
+});
+
 test('stops with a QuotaError when the daily free quota is used up', async () => {
+  process.env.GEMINI_FALLBACK_MODELS = '';
   fakeGemini(() => ({
     status: 429,
     body: { error: { code: 429, status: 'RESOURCE_EXHAUSTED', message: 'Quota exceeded for metric: generate_content_free_tier_requests, limit per day' } },

@@ -35,6 +35,9 @@ jobs:
       GEMINI_TAILOR_MODEL: ${{ vars.GEMINI_TAILOR_MODEL }}
       CLAUDE_SCORE_MODEL: ${{ vars.CLAUDE_SCORE_MODEL }}
       CLAUDE_TAILOR_MODEL: ${{ vars.CLAUDE_TAILOR_MODEL }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,3 +70,13 @@ jobs:
         env:
           STEPS: ${{ github.event.inputs.steps || 'collect,score,tailor' }}
         run: npm run pipeline -- "--only=$STEPS"
+
+      - name: Tell me on Telegram if the run failed
+        if: failure()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then exit 0; fi
+          curl -sS -m 15 -o /dev/null "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=❌ Job Hunter failed today. ${RUN_URL}" || true

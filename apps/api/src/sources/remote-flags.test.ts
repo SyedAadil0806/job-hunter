@@ -60,6 +60,22 @@ test('Google Jobs reads date, salary, schedule and remote from the plain extensi
   assert.equal(remote.salary, undefined);
 });
 
+test('Google Jobs picks the company site, then a big board, and copy sites last', async () => {
+  process.env.SERPAPI_KEY = 'k';
+  process.env.GOOGLE_MAX_SEARCHES_PER_RUN = '1';
+  const option = (title: string) => ({ title: `Apply on ${title}`, link: `https://${title}.example` });
+  const googleJob = { title: 'React Developer', company_name: 'Acme', location: 'Dubai', extensions: [] };
+  fakeApi({
+    jobs_results: [
+      { ...googleJob, job_id: '1', apply_options: [option('Jooble'), option('LinkedIn'), option('Acme Careers')] },
+      { ...googleJob, job_id: '2', apply_options: [option('Jobrapido'), option('LinkedIn')] },
+      { ...googleJob, job_id: '3', apply_options: [option('Jooble')] },
+    ],
+  });
+  const jobs = await new GoogleJobsSource().fetchJobs({ ...config, googleLocations: ['United Arab Emirates'] } as SearchConfig);
+  assert.deepEqual(jobs.map((j) => j.url), ['https://Acme Careers.example', 'https://LinkedIn.example', 'https://Jooble.example']);
+});
+
 test('Jooble "Remote" search asks for remote jobs but does not trust the search', async () => {
   fakeApi({ jobs: [joobleJob({ id: 1 }), joobleJob({ id: 2, location: 'Remote' })] });
   const jobs = await new JoobleSource().fetchJobs(config);

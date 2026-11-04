@@ -13,7 +13,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "tsx --test src/jobs/filter.test.ts src/cv/tailor.merge.test.ts src/ai/ai.service.test.ts src/sources/remote-flags.test.ts"
+    "test": "tsx --test src/jobs/filter.test.ts src/cv/tailor.merge.test.ts src/ai/ai.service.test.ts src/sources/remote-flags.test.ts src/jobs/liveness.service.test.ts src/pipeline/notify.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
