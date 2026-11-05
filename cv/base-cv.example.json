@@ -1,0 +1,50 @@
+{
+  "name": "Alex Example",
+  "title": "Full-Stack Developer",
+  "titleOptions": ["Frontend Developer (React · Next.js)", "Backend Developer (Node.js · PostgreSQL)", "Software Engineer"],
+  "contact": {
+    "email": "alex@example.com",
+    "phone": "+000 00 000 0000",
+    "location": "Your City, Your Country",
+    "linkedin": "https://www.linkedin.com/in/your-profile",
+    "github": "https://github.com/your-username",
+    "portfolio": "https://example.com"
+  },
+  "summary": "Developer who builds web apps with React and Node.js. Write two or three honest sentences about your work here.",
+  "skills": {
+    "Frontend": ["React", "Next.js", "TypeScript"],
+    "Backend": ["Node.js", "NestJS", "PostgreSQL"],
+    "Tools": ["Git", "Docker"]
+  },
+  "experience": [
+    {
+      "role": "Web Developer",
+      "company": "Example Company",
+      "location": "Your City",
+      "start": "Jan 2024",
+      "end": "Present",
+      "bullets": [
+        "Built customer-facing pages in React and TypeScript.",
+        "Added REST endpoints in NestJS backed by PostgreSQL."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Example Project",
+      "stack": ["React", "NestJS", "PostgreSQL"],
+      "link": "https://github.com/your-username/example-project",
+      "bullets": ["Describe what you built and what it does."]
+    }
+  ],
+  "education": [
+    {
+      "degree": "BS Computer Science",
+      "school": "Example University",
+      "location": "Your City",
+      "end": "2024",
+      "details": []
+    }
+  ],
+  "certifications": []
+}

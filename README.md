@@ -1,148 +1,132 @@
 # Job Hunter
 
-A personal job search assistant. Every morning it:
+A personal job search system that runs itself. Twice a day it finds new jobs, scores them against my CV with AI, writes a tailored CV and cover letter for the best matches, and sends me a Telegram message. I review each one in a dashboard on my phone and apply myself.
 
-1. **Finds jobs** from Remotive, Remote OK, Arbeitnow, Jooble, Adzuna and Google Jobs (which includes LinkedIn, Bayt and GulfTalent listings).
-2. **Filters** them with cheap rules (role, seniority, location, age), so you only pay AI costs on jobs that could fit.
-3. **Scores** each job 0–100 against your CV with AI (Gemini for free, or Claude), and lists matching and missing skills.
-4. **Tailors** your CV and writes a cover letter for the best matches, then makes an ATS-friendly PDF.
-5. **Tracks** every job you apply to, with status (applied, interview, offer, rejected, …) and notes.
+Built for one person, and used for my own job search in the UAE.
 
-You still click "submit" on each job yourself. That keeps your accounts safe and your applications high quality.
+**Stack:** TypeScript · NestJS 11 · Prisma 6 · PostgreSQL · React 19 + Vite · Gemini / Claude APIs · PDFKit · GitHub Actions · Render · Vercel
 
-```
-GitHub Actions (daily, free) ──► job sites / Google Jobs
-          │                              │
-          ▼                              ▼
-     Neon Postgres (free) ◄── NestJS pipeline + Gemini / Claude
-          ▲
-          │
- Render (free) NestJS API ◄── Vercel (free) React dashboard
-```
+## How it works
 
-**Stack:** NestJS 11, Prisma 6, PostgreSQL, Gemini API / Claude API (schema-enforced JSON output), PDFKit, React 19 + Vite, GitHub Actions.
-
-## How the "no fake facts" rule works
-
-The AI is only allowed to reword and reorder. The code then checks what comes back (`apps/api/src/cv/tailor.merge.ts`):
-
-- Skills: only skills already in your CV are kept; anything new is dropped.
-- Bullets: if a reworded bullet has a number that was not in your original bullet, the original is used instead.
-- Bullet counts per job and project stay the same as your CV.
-
-## AI: free or paid
-
-Set `AI_PROVIDER` to choose. Scoring uses a fast model, tailoring a stronger one.
-
-| | Gemini (`AI_PROVIDER=gemini`) | Claude (`AI_PROVIDER=claude`) |
-|---|---|---|
-| Cost | Free tier | A few dollars a month at default limits |
-| Default models | `gemini-flash-lite-latest`, `gemini-flash-latest` | `claude-haiku-5-5`, `claude-sonnet-5-5` |
-| Privacy | On the free tier Google may use your prompts (your CV) to improve its products, and people may review them | Not used for training |
-| Limits | Per-minute and per-day caps; the pipeline spaces calls out and stops cleanly when the daily cap is hit, then continues tomorrow | Pay as you go |
-
-`npm run ai:check` tests your key, lists the Gemini models you can use and checks the database. Override models with `GEMINI_SCORE_MODEL` / `GEMINI_TAILOR_MODEL` (or the `CLAUDE_…` ones).
-
-Everything else (Neon, GitHub Actions, Render, Vercel) is on free plans. Change daily limits in `cv/search-config.json` → `limits`.
-
-## Setup (about 30 minutes, once)
-
-### 1. Your CV and search settings
-
-```bash
-cp cv/base-cv.example.json cv/base-cv.json   # then fill in your real CV
-npm install
-npm run cv:secret                            # prints your CV as one line
+```mermaid
+flowchart LR
+  A[GitHub Actions<br/>schedule or Run now] --> B[Collect<br/>job sites + Google Jobs]
+  B --> C[Filter<br/>role, level, location, age]
+  C --> D[Check links<br/>remove closed jobs]
+  D --> E[AI score<br/>0 to 100 against CV]
+  E --> F[AI tailor<br/>CV + cover letter + PDF]
+  F --> G[(Neon Postgres)]
+  F --> H[Telegram message]
+  G --> I[NestJS API<br/>Render]
+  I --> J[React dashboard<br/>Vercel, installable on Android]
 ```
 
-`cv/base-cv.json` is in `.gitignore`, so your CV never goes into the repo. Edit `cv/search-config.json` to change search words, excluded titles and locations.
+1. **Collect:** pulls jobs from Remotive, Remote OK, Arbeitnow and Google Jobs. Adzuna and Jooble are optional.
+2. **Filter:** cheap rules run first, so AI is only used on jobs that could fit. Jobs inside the UAE can be on-site, hybrid or remote. Jobs elsewhere must be truly remote.
+3. **Check links:** closed and old jobs are removed. If a site blocks the check, the job gets a visible warning instead of being dropped.
+4. **Score:** AI gives each job a score from 0 to 100, with matching skills, missing skills and red flags.
+5. **Tailor:** jobs scoring 70 or more get a tailored CV as an ATS-friendly PDF, plus a cover letter.
+6. **Apply and track:** I apply by hand, then track each application from applied through to offer or rejection.
 
-### 2. Free accounts and keys
+**It never submits applications by itself.** Application forms differ for every company, many have CAPTCHAs, and job sites ban bots. A person checking each one also keeps quality high.
 
-| What | Where | Needed? |
-|---|---|---|
-| Postgres database | [neon.tech](https://neon.tech) → new project → copy connection string | Yes |
-| Gemini API key (free) | [aistudio.google.com](https://aistudio.google.com) → Get API key | Yes (or Claude) |
-| Claude API key (paid) | [console.anthropic.com](https://console.anthropic.com) | Only if you choose Claude |
-| Google Jobs | [serpapi.com](https://serpapi.com) (free plan, limited searches) | Recommended for UAE |
-| Jooble | [jooble.org/api/about](https://jooble.org/api/about) | Recommended for UAE |
-| Adzuna | [developer.adzuna.com](https://developer.adzuna.com) | Optional (no UAE, remote only) |
+## Engineering decisions
 
-Remotive, Remote OK and Arbeitnow need no key.
+### The AI can't invent facts
 
-### 3. GitHub (runs every morning)
+A prompt alone can't guarantee honesty on a CV, so the code enforces it after every AI reply ([`tailor.merge.ts`](apps/api/src/cv/tailor.merge.ts), with tests):
 
-Push this repo to GitHub. A **private** repo is fine and has plenty of free Actions minutes for this.
+- **Titles:** the AI picks from a list of approved titles by number. It can't write a new one.
+- **Skills:** they can only be reordered. Anything not already in the CV is dropped, and nothing real is removed.
+- **Bullets:** if a reworded bullet contains a number that wasn't in the original, the original is used instead. This blocks made-up metrics.
+- **Summary:** it's replaced with the original if it contains a number found nowhere in the CV.
 
-Go to **Settings → Secrets and variables → Actions** and add these secrets:
+### Free services that fail safely
 
-- `DATABASE_URL`, `GEMINI_API_KEY`, `BASE_CV_JSON` (required)
-- `ANTHROPIC_API_KEY` (only for Claude; also add a **variable** `AI_PROVIDER` = `claude` under the Variables tab)
-- `SERPAPI_KEY`, `JOOBLE_API_KEY`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` (optional)
+The system runs on free plans, so limits and outages are normal and are handled in code:
 
-Then open **Actions → Daily job hunt → Run workflow** to try it now. After a run, its page shows a summary with the jobs that are ready.
+- **Backup models:** if a Gemini model is overloaded, removed or out of quota, the call moves to the next model. When all are used up, the remaining jobs simply wait for the next run.
+- **Validated AI output:** every reply must match a JSON schema and is checked with Zod. A bad reply only affects that one job.
+- **Sources fail separately:** if one job site is down, the run continues and reports it.
+- **Nothing is left silent:** every run sends a Telegram message, and a crashed run sends a link to its log.
 
-### 4. API on Render (free)
+### Dead job detection that doesn't guess
 
-Render → **New → Blueprint** → pick the repo (it reads `render.yaml`). Fill in `DATABASE_URL`, `GEMINI_API_KEY`, `BASE_CV_JSON` and `WEB_ORIGIN` (your Vercel URL from step 5). Render creates `DASHBOARD_TOKEN` for you; copy it from the service's Environment tab.
+[`liveness.service.ts`](apps/api/src/jobs/liveness.service.ts) only calls a job closed on clear proof: a 404 or 410 response, or clear wording visible on the page. Bot checks, errors and pages that need JavaScript count as "unknown". This avoids hiding a job that's still open.
 
-Free Render services sleep when idle, so the first request after a while takes about 30 seconds.
+### Secrets stay on the server
 
-### 5. Dashboard on Vercel (free)
+- The real CV and all keys are stored as encrypted secrets, and the CV file is git-ignored.
+- The dashboard's "Run now" button calls the API, which holds a GitHub key limited to this repo's Actions. The key never reaches the browser.
+- API requests need a token compared in constant time, and CORS only allows the dashboard's address.
 
-Vercel → **Add New Project** → pick the repo → set **Root Directory** to `apps/web` → add env var `VITE_API_URL` = your Render URL → Deploy. Open the site and paste your `DASHBOARD_TOKEN`.
+### Respecting the job sites
 
-### 6. Telegram message and phone app (optional)
-
-Create a bot with [@BotFather](https://t.me/BotFather), put its token in `apps/api/.env` as `TELEGRAM_BOT_TOKEN`, send the bot "hi", then run `npm run telegram:setup` to get your chat id. Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as GitHub secrets and `DASHBOARD_URL` as a GitHub variable. You get a message after every run: the new CVs if there are any, otherwise what the run found, plus any problems.
-
-To install the dashboard on Android, open it in Chrome, tap the ⋮ menu, then **Add to Home screen** or **Install app**.
-
-### 7. "Run now" button (optional)
-
-Create a [fine-grained GitHub token](https://github.com/settings/personal-access-tokens/new) with access to only this repo and **Actions: Read and write**. On Render, add `GITHUB_DISPATCH_TOKEN` (the token) and `GITHUB_REPO` (`your-name/job-hunter`). The button then appears in the dashboard.
-
-## Daily use
-
-1. Open the dashboard → **Ready to apply**.
-2. For each job: **Download CV**, open **Cover letter** and copy it, then open the job link and apply.
-3. Click **I applied ✓**. The job moves to **Applied**, where you update its status later.
-4. **All matches** shows every scored job. **Make CV** tailors one on demand.
-
-## Run locally
-
-```bash
-cp apps/api/.env.example apps/api/.env   # fill in DATABASE_URL, GEMINI_API_KEY, DASHBOARD_TOKEN
-npm run ai:check                # checks AI key + database
-npm run db:push                 # create tables
-npm run pipeline                # one full run
-npm run dev:api                 # API on :3000
-npm run dev:web                 # dashboard on :5173
-npm test                        # unit tests
-```
-
-Run only some steps: `npm run pipeline -w apps/api -- --only=collect` (or `collect,score`).
-
-## Adding a job site
-
-Make a class that implements `JobSource` in `apps/api/src/sources/`, then add it to `allSources()` in `sources/index.ts`.
-
-## Rules for the job sites
-
-- **Remotive** allows about 4 fetches a day and asks you to link back, so the pipeline fetches it once per run and the dashboard links every job to its source.
-- **LinkedIn** is not scraped (that breaks their rules and can get your account banned). LinkedIn jobs come in through Google Jobs instead.
-- Respect each site's terms if you change how often the pipeline runs.
+- **LinkedIn isn't scraped.** Its jobs arrive through Google Jobs.
+- **Remotive** gets one request per scheduled run, within its daily limit, and manual runs skip it.
+- **Attribution:** the dashboard links every job back to its source, as Remotive and Remote OK ask.
 
 ## Project layout
 
 ```
-apps/api      NestJS API + daily pipeline
-  src/sources   one file per job site
-  src/jobs      filter rules, collector, REST endpoints
-  src/ai        Claude scoring + tailoring
-  src/cv        CV schema, safe merge, PDF renderer
-  prisma        database schema
-apps/web      React dashboard
-cv/           your CV (git-ignored) + search settings
-.github       daily run + CI
+apps/api            NestJS API and the pipeline
+  src/sources       one class per job site
+  src/jobs          filter rules, collector, link checks, REST endpoints
+  src/ai            model switching, scoring, tailoring
+  src/cv            CV schema, safe merge, PDF renderer
+  src/pipeline      run orchestration, Telegram message, Run now
+  prisma            database schema
+apps/web            React dashboard, installable as a web app
+cv                  search settings and an example CV
+.github/workflows   scheduled runs and CI
 ```
+
+## Run it yourself
+
+You need Node 20 or newer, a free [Neon](https://neon.tech) database and a free [Gemini API key](https://aistudio.google.com).
+
+```bash
+npm install
+cp cv/base-cv.example.json cv/base-cv.json   # then fill in your real CV
+cp apps/api/.env.example apps/api/.env       # then fill in DATABASE_URL, GEMINI_API_KEY, DASHBOARD_TOKEN
+npm run ai:check     # tests the AI key and database
+npm run db:push      # creates the tables
+npm run pipeline     # one full run
+npm run dev:api      # API on http://localhost:3000
+npm run dev:web      # dashboard on http://localhost:5173
+```
+
+Use `npm test` for the unit tests. To run only some steps: `npm run pipeline -w apps/api -- --only=collect,score`. Edit `cv/search-config.json` to change search words, titles, locations and limits.
+
+**Privacy:** on Gemini's free tier, Google may use your prompts, which include your CV, to improve its products. Set `AI_PROVIDER=claude` to use the paid Claude API instead.
+
+## Deploy it (free plans)
+
+**1. GitHub Actions.** Push to GitHub, then add these under **Settings → Secrets and variables → Actions**:
+
+| Name | Type | Needed? |
+|---|---|---|
+| `DATABASE_URL`, `GEMINI_API_KEY` | Secret | Yes |
+| `BASE_CV_JSON` (output of `npm run cv:secret`) | Secret | Yes |
+| `SERPAPI_KEY` | Secret | For Google Jobs |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Secret | For messages |
+| `ANTHROPIC_API_KEY` | Secret | Only for Claude |
+| `DASHBOARD_URL`, `GEMINI_TAILOR_MODEL`, `GOOGLE_MAX_SEARCHES_PER_RUN`, `AI_PROVIDER` | Variable | Optional |
+
+Then try **Actions → Daily job hunt → Run workflow**. On a public repo, run logs and summaries are public and show job titles and companies. GitHub also turns off scheduled runs after 60 days with no repo activity.
+
+**2. API on Render.** Go to **New → Blueprint** and pick the repo. Fill in `DATABASE_URL`, `GEMINI_API_KEY`, `BASE_CV_JSON` and `WEB_ORIGIN`. Render generates `DASHBOARD_TOKEN`, or you can set your own of at least 16 characters. Free services sleep when idle, so the first request can be slow.
+
+**3. Dashboard on Vercel.** Add a new project, set **Root Directory** to `apps/web`, add `VITE_API_URL` with your Render URL, and deploy. Then set `WEB_ORIGIN` on Render to your Vercel address. To install it on Android, open it in Chrome, tap ⋮, then **Install app** or **Add to Home screen**.
+
+**4. Telegram (optional).** Create a bot with [@BotFather](https://t.me/BotFather), add `TELEGRAM_BOT_TOKEN` to `apps/api/.env`, send the bot "hi", and run `npm run telegram:setup` to get your chat ID.
+
+**5. Run now button (optional).** Create a [fine-grained GitHub token](https://github.com/settings/personal-access-tokens/new) for this repo only, with **Actions: Read and write**. On Render, add it as `GITHUB_DISPATCH_TOKEN`, and add `GITHUB_REPO` as `your-name/job-hunter`.
+
+## Adding a job site
+
+Write a class that implements `JobSource` in `apps/api/src/sources/`, then add it to `allSources()` in `sources/index.ts`. Check the site's terms and rate limits first.
+
+---
+
+Built by [Syed Aadil Ahmed](https://github.com/SyedAadil0806).
