@@ -52,7 +52,10 @@ export async function sendTelegram(text: string): Promise<boolean> {
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
       signal: AbortSignal.timeout(15_000),
     });
-    if (!res.ok) console.error(`Telegram message failed: HTTP ${res.status}`);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { description?: string };
+      console.error(`Telegram message failed: HTTP ${res.status} ${body.description ?? ''}`);
+    }
     return res.ok;
   } catch {
     console.error('Telegram message failed: could not reach Telegram');
