@@ -1,11 +1,9 @@
 name: Daily job hunt
 
 on:
-  schedule:
-    # 03:17 and 15:17 UTC = 07:17 and 19:17 in the UAE, every day
-    - cron: '17 3,15 * * *'
-  # Lets you press "Run workflow" on GitHub any time
-  # Also started by an outside timer (cron-job.org), because GitHub's own schedule runs hours late.
+  # Started at 07:17 and 19:17 UAE time by cron-job.org with trigger=schedule.
+  # GitHub's own schedule was removed because it started runs 7 to 9 hours late.
+  # Also lets you press "Run workflow" on GitHub, or Run now in the dashboard, any time.
   workflow_dispatch:
     inputs:
       trigger:
@@ -43,7 +41,7 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
-      # Remotive allows about 4 fetches a day, so only the 2 scheduled runs use it.
+      # Remotive allows about 4 fetches a day, so only the 2 timer runs (trigger=schedule) use it.
       DISABLE_REMOTIVE: ${{ github.event_name == 'workflow_dispatch' && inputs.trigger != 'schedule' && 'true' || '' }}
     steps:
       - uses: actions/checkout@v4
