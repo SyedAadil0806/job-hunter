@@ -43,7 +43,7 @@ export class PipelineService {
       } else {
         if (steps.includes('score')) {
           // Check links first, so no AI quota is spent on closed jobs.
-          const links = await this.liveness.removeDeadJobs(config.limits.maxJobAgeDays);
+          const links = await this.liveness.removeDeadJobs(config.limits);
           const s = await this.scoring.scorePending(config.limits.maxScorePerRun);
           stats.scored = s.scored;
           errors.push(...s.errors);

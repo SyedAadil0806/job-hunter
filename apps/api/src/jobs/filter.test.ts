@@ -86,3 +86,13 @@ test('dedupe key ignores company suffixes and punctuation', () => {
     dedupeKey({ company: 'acme tech', title: 'React developer' }),
   );
 });
+
+test('keeps developer internships and drops jobs posted over a week ago', () => {
+  for (const title of ['Software Engineering Intern', 'Web Development Internship', 'Frontend Developer Intern', 'Developer Trainee']) {
+    assert.equal(prefilter(job({ title }), config, now).keep, true, title);
+  }
+  for (const title of ['Marketing Intern', 'Internal Audit Associate', 'International Sales Executive']) {
+    assert.equal(prefilter(job({ title }), config, now).keep, false, title);
+  }
+  assert.equal(prefilter(job({ postedAt: new Date('2026-10-27T00:00:00Z') }), config, now).keep, false);
+});

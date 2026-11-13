@@ -113,7 +113,7 @@ Use `npm test` for the unit tests. To run only some steps: `npm run pipeline -w 
 | `ANTHROPIC_API_KEY` | Secret | Only for Claude |
 | `DASHBOARD_URL`, `GEMINI_TAILOR_MODEL`, `GOOGLE_MAX_SEARCHES_PER_RUN`, `AI_PROVIDER` | Variable | Optional |
 
-Then try **Actions → Daily job hunt → Run workflow**. On a public repo, run logs and summaries are public and show job titles and companies. GitHub also turns off scheduled runs after 60 days with no repo activity.
+Then try **Actions → Daily job hunt → Run workflow**. GitHub's built-in schedule can start hours late, so for on-time runs use a free timer such as [cron-job.org](https://cron-job.org): send `POST https://api.github.com/repos/<owner>/<repo>/actions/workflows/daily-job-hunt.yml/dispatches` with the headers `Authorization: Bearer <token>` and `Accept: application/vnd.github+json`, and the body `{"ref":"main","inputs":{"trigger":"schedule"}}`. The token is the same kind as the Run now button's (step 5), and you should remove the `schedule:` block from the workflow once the timer works. On a public repo, run logs and summaries are public and show job titles and companies. GitHub also turns off scheduled runs after 60 days with no repo activity.
 
 **2. API on Render.** Go to **New → Blueprint** and pick the repo. Fill in `DATABASE_URL`, `GEMINI_API_KEY`, `BASE_CV_JSON` and `WEB_ORIGIN`. Render generates `DASHBOARD_TOKEN`, or you can set your own of at least 16 characters. Free services sleep when idle, so the first request can be slow.
 

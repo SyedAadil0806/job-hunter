@@ -37,6 +37,8 @@ Scoring guide:
 - 50-69: stretch. Big skill gaps or slightly too senior.
 - 0-49: poor fit or a deal-breaker (e.g. 5+ years required, region-locked to a country the candidate can't work in, unrelated stack).
 The candidate is based in the UAE. Remote roles open to the UAE/worldwide are fine.
+Internships, paid or unpaid, are welcome: score them on skill fit like junior roles, and don't lower the score because they are internships or unpaid.
+If an internship is only for current students, add a red flag and score it at most 50, because the candidate has graduated.
 Only list skills that appear in the job post. Never assume the candidate has a skill not in their CV.`;
 
 /** A short text version of the CV, so scoring prompts stay cheap. */

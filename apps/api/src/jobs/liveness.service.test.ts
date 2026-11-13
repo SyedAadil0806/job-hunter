@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { classifyPage } from './liveness.service';
+import { ageReason, classifyPage } from './liveness.service';
 
 const url = 'https://jobs.example.com/123';
 const longText = 'We are hiring a React developer to build great products with our team. '.repeat(10);
@@ -43,4 +43,14 @@ test('a very short page built by JavaScript is unknown', () => {
 
 test('a normal job page is open', () => {
   assert.equal(classifyPage(200, url, page(longText)), 'open');
+});
+
+test('jobs with a date must be at most 7 days old; undated ones are kept 30 days after we find them', () => {
+  const now = Date.UTC(2026, 10, 13);
+  const daysAgo = (d: number) => new Date(now - d * 8.64e7);
+  const limits = { maxJobAgeDays: 7, maxUndatedAgeDays: 30 };
+  assert.equal(ageReason({ postedAt: daysAgo(6), createdAt: daysAgo(1) }, limits, now), null);
+  assert.match(ageReason({ postedAt: daysAgo(8), createdAt: daysAgo(1) }, limits, now)!, /posted more than 7 days/);
+  assert.equal(ageReason({ postedAt: null, createdAt: daysAgo(20) }, limits, now), null);
+  assert.match(ageReason({ postedAt: null, createdAt: daysAgo(31) }, limits, now)!, /no posting date/);
 });

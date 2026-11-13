@@ -27,8 +27,10 @@ export const SearchConfigSchema = z.object({
     maxTailorPerRun: z.number().int().nonnegative().default(10),
     /** Only tailor jobs with at least this score (0-100). */
     minScoreToTailor: z.number().int().min(0).max(100).default(70),
-    /** Ignore jobs older than this many days. */
-    maxJobAgeDays: z.number().int().positive().default(21),
+    /** Drop jobs posted more than this many days ago. */
+    maxJobAgeDays: z.number().int().positive().default(7),
+    /** Jobs with no posting date are kept this many days after we first find them. */
+    maxUndatedAgeDays: z.number().int().positive().default(30),
   }),
 });
 

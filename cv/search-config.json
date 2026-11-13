@@ -7,7 +7,9 @@
     "junior software engineer",
     "react native developer",
     "automation developer n8n",
-    "finance automation"
+    "finance automation",
+    "software engineering intern",
+    "web development internship"
   ],
   "titleMustInclude": [
     "react",
@@ -35,7 +37,22 @@
     "integration developer",
     "integration engineer",
     "workflow",
-    "rpa"
+    "rpa",
+    "developer intern",
+    "engineer intern",
+    "engineering intern",
+    "development intern",
+    "software intern",
+    "web intern",
+    "programming intern",
+    "tech intern",
+    "technology intern",
+    "web development",
+    "software development",
+    "trainee developer",
+    "developer trainee",
+    "graduate developer",
+    "graduate software"
   ],
   "titleExclude": [
     "senior",
@@ -85,13 +102,20 @@
     "europe only",
     "eu only"
   ],
-  "googleLocations": ["United Arab Emirates"],
-  "adzunaCountries": ["gb", "nl", "de"],
+  "googleLocations": [
+    "United Arab Emirates"
+  ],
+  "adzunaCountries": [
+    "gb",
+    "nl",
+    "de"
+  ],
   "joobleLocations": [],
   "limits": {
     "maxScorePerRun": 60,
     "maxTailorPerRun": 10,
     "minScoreToTailor": 70,
-    "maxJobAgeDays": 21
+    "maxJobAgeDays": 7,
+    "maxUndatedAgeDays": 30
   }
 }

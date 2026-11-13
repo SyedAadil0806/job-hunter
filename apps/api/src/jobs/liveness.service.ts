@@ -47,6 +47,17 @@ async function checkLink(url: string): Promise<LinkState> {
   }
 }
 
+/** Dated jobs are judged by when they were posted. Undated ones by when we first found them. */
+export function ageReason(
+  job: { postedAt: Date | null; createdAt: Date },
+  limits: { maxJobAgeDays: number; maxUndatedAgeDays: number },
+  now = Date.now(),
+): string | null {
+  const days = (now - (job.postedAt ?? job.createdAt).getTime()) / 8.64e7;
+  if (job.postedAt) return days > limits.maxJobAgeDays ? `posted more than ${limits.maxJobAgeDays} days ago` : null;
+  return days > limits.maxUndatedAgeDays ? `no posting date, found more than ${limits.maxUndatedAgeDays} days ago` : null;
+}
+
 const MAX_CHECKS_PER_RUN = 100;
 const AT_ONCE = 5;
 
@@ -57,14 +68,13 @@ export class LivenessService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Removes jobs that are closed or too old. Returns the ids that were checked, by result. */
-  async removeDeadJobs(maxAgeDays: number) {
+  async removeDeadJobs(limits: { maxJobAgeDays: number; maxUndatedAgeDays: number }) {
     const jobs = await this.prisma.job.findMany({
       where: { status: { in: ['NEW', 'SCORED', 'READY'] } },
       orderBy: [{ score: { sort: 'desc', nulls: 'first' } }, { createdAt: 'desc' }],
       take: MAX_CHECKS_PER_RUN,
       select: { id: true, url: true, postedAt: true, createdAt: true },
     });
-    const oldest = Date.now() - maxAgeDays * 8.64e7;
     const remove = (id: string, filterReason: string) =>
       this.prisma.job.update({ where: { id }, data: { status: 'FILTERED', filterReason } });
 
@@ -72,8 +82,9 @@ export class LivenessService {
     for (let i = 0; i < jobs.length; i += AT_ONCE) {
       await Promise.all(
         jobs.slice(i, i + AT_ONCE).map(async (job) => {
-          if ((job.postedAt ?? job.createdAt).getTime() < oldest) {
-            await remove(job.id, `older than ${maxAgeDays} days`);
+          const tooOld = ageReason(job, limits);
+          if (tooOld) {
+            await remove(job.id, tooOld);
             result.expired += 1;
             return;
           }

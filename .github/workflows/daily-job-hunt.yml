@@ -5,8 +5,13 @@ on:
     # 03:17 and 15:17 UTC = 07:17 and 19:17 in the UAE, every day
     - cron: '17 3,15 * * *'
   # Lets you press "Run workflow" on GitHub any time
+  # Also started by an outside timer (cron-job.org), because GitHub's own schedule runs hours late.
   workflow_dispatch:
     inputs:
+      trigger:
+        description: 'Set to "schedule" by the outside timer. Leave as manual.'
+        required: false
+        default: 'manual'
       steps:
         description: 'Steps to run (comma-separated: collect,score,tailor)'
         required: false
@@ -39,7 +44,7 @@ jobs:
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
       # Remotive allows about 4 fetches a day, so only the 2 scheduled runs use it.
-      DISABLE_REMOTIVE: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
+      DISABLE_REMOTIVE: ${{ github.event_name == 'workflow_dispatch' && inputs.trigger != 'schedule' && 'true' || '' }}
     steps:
       - uses: actions/checkout@v4
 

@@ -77,7 +77,7 @@ export function JobCard({ job, sourceLabel, onOpen, onChange }: Props) {
         <a href={job.url} target="_blank" rel="noreferrer">
           View on {sourceLabel} ↗
         </a>
-        <span>{timeAgo(job.postedAt ?? job.createdAt)}</span>
+        <span>{job.postedAt ? `posted ${timeAgo(job.postedAt)}` : `no posting date, found ${timeAgo(job.createdAt)}`}</span>
         {job.salary && <span>{job.salary}</span>}
       </p>
 
