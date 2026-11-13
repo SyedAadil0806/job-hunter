@@ -74,7 +74,7 @@ export class PipelineService {
     const newlyReady = await this.prisma.job.findMany({
       where: { status: 'READY', cvVersions: { some: { createdAt: { gte: run.startedAt } } } },
       orderBy: { score: 'desc' },
-      select: { title: true, company: true, location: true, score: true },
+      select: { id: true, url: true, title: true, company: true, location: true, score: true },
     });
     this.log.log(`done: ${JSON.stringify(stats)}${errors.length ? `, ${errors.length} warnings` : ''}`);
     return { ...stats, errors, ready, newlyReady };

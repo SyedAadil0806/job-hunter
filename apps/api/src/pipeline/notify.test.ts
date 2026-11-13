@@ -47,3 +47,20 @@ test('shortens a very long list', () => {
   assert.match(text, /20 new jobs ready/);
   assert.match(text, /and 5 more/);
 });
+
+test('each job links to its application page and to its CV in the dashboard', () => {
+  const text = buildDigest({
+    ...base,
+    newlyReady: [{ ...job, id: 'abc', url: 'https://jobs.example.com/apply?id=1&src=g' }],
+    dashboardUrl: 'https://x.vercel.app/',
+  });
+  assert.match(text, /<a href="https:\/\/jobs\.example\.com\/apply\?id=1&amp;src=g">React Developer<\/a>/);
+  assert.match(text, /<a href="https:\/\/x\.vercel\.app\/\?job=abc">CV &amp; letter<\/a>/);
+});
+
+test('stays under Telegram\'s length limit when links are long', () => {
+  const longJob = { ...job, id: 'x'.repeat(25), url: `https://example.com/${'a'.repeat(400)}` };
+  const text = buildDigest({ ...base, newlyReady: Array.from({ length: 15 }, () => longJob), dashboardUrl: 'https://x.vercel.app' });
+  assert.ok(text.length < 4096, String(text.length));
+  assert.match(text, /more in the dashboard/);
+});

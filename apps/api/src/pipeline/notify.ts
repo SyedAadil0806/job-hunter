@@ -1,4 +1,6 @@
 export interface DigestJob {
+  id?: string;
+  url?: string;
   title: string;
   company: string;
   location: string;
@@ -15,7 +17,19 @@ export interface DigestInput {
 }
 
 const MAX_JOBS = 15;
+/** Telegram allows 4096 characters, and job links can be long. */
+const MAX_LENGTH = 3800;
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const link = (href: string, text: string) => `<a href="${escapeHtml(href)}">${text}</a>`;
+
+/** One job: the title opens the application page, "CV & letter" opens it in the dashboard. */
+function jobLine(j: DigestJob, dashboardUrl?: string): string {
+  const title = j.url ? link(j.url, escapeHtml(j.title)) : escapeHtml(j.title);
+  const parts = [`${j.score ?? '-'} – ${title} @ ${escapeHtml(j.company)}, ${escapeHtml(j.location)}`];
+  if (dashboardUrl && j.id) parts.push(link(`${dashboardUrl.replace(/\/$/, '')}/?job=${encodeURIComponent(j.id)}`, 'CV &amp; letter'));
+  return parts.join(' · ');
+}
 
 /** The message sent after every run. */
 export function buildDigest({ newJobs, newlyReady, errors, tailorRan, dashboardUrl }: DigestInput): string {
@@ -29,10 +43,15 @@ export function buildDigest({ newJobs, newlyReady, errors, tailorRan, dashboardU
     lines.push(`✅ Run finished: ${[found, outcome].filter(Boolean).join(', ')}`);
   } else {
     lines.push(`🎯 <b>${newlyReady.length} new ${newlyReady.length === 1 ? 'job' : 'jobs'} ready</b>`);
+    lines.push('Tap a title to apply. Tap "CV &amp; letter" to get them ready first.', '');
+    let shown = 0;
     for (const j of newlyReady.slice(0, MAX_JOBS)) {
-      lines.push(`${j.score ?? '-'} – ${escapeHtml(j.title)} @ ${escapeHtml(j.company)}, ${escapeHtml(j.location)}`);
+      const line = jobLine(j, dashboardUrl);
+      if (lines.join('\n').length + line.length > MAX_LENGTH) break;
+      lines.push(line);
+      shown += 1;
     }
-    if (newlyReady.length > MAX_JOBS) lines.push(`…and ${newlyReady.length - MAX_JOBS} more`);
+    if (newlyReady.length > shown) lines.push(`…and ${newlyReady.length - shown} more in the dashboard`);
   }
   if (waiting) lines.push('⏳ The AI free limit ran out, so some jobs will finish after it resets.');
   if (otherProblems) lines.push(`⚠️ ${otherProblems} ${otherProblems === 1 ? 'problem' : 'problems'} in this run. See the run page on GitHub.`);

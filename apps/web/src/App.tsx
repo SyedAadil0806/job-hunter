@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, Stats, token } from './api';
+import { JobDrawer } from './components/JobDrawer';
 import { JobsView } from './components/JobsView';
 import { Login } from './components/Login';
 import { RunNow } from './components/RunNow';
@@ -19,6 +20,12 @@ export function App() {
   const [tab, setTab] = useState<Tab>('ready');
   const [stats, setStats] = useState<Stats | null>(null);
   const [sources, setSources] = useState<Record<string, string>>({});
+  // Links from Telegram open one job directly: /?job=<id>
+  const [linkedJob, setLinkedJob] = useState(() => new URLSearchParams(window.location.search).get('job'));
+  const closeLinkedJob = () => {
+    setLinkedJob(null);
+    window.history.replaceState(null, '', window.location.pathname);
+  };
 
   const refreshStats = useCallback(() => {
     api
@@ -95,6 +102,7 @@ export function App() {
         {tab === 'skipped' && <JobsView key="skipped" status="SKIPPED" sources={sources} onChange={refreshStats} empty="Nothing skipped." />}
         {tab === 'tracker' && <Tracker sources={sources} onChange={refreshStats} />}
       </main>
+      {linkedJob && <JobDrawer id={linkedJob} sourceLabel={(s) => sources[s] ?? s} onClose={closeLinkedJob} onChange={refreshStats} />}
     </div>
   );
 }
