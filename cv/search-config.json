@@ -113,7 +113,7 @@
   "joobleLocations": [],
   "limits": {
     "maxScorePerRun": 60,
-    "maxTailorPerRun": 10,
+    "maxTailorPerRun": 60,
     "minScoreToTailor": 70,
     "maxJobAgeDays": 7,
     "maxUndatedAgeDays": 30

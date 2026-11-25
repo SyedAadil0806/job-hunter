@@ -8,42 +8,63 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AiService, isQuotaError } from './ai.service';
 import { jobForPrompt } from './scoring.service';
 
+/** The job's skills found by scoring: what the CV needs to contain. */
+export const jobKeywords = (job: Pick<Job, 'matchedSkills' | 'missingSkills'>) => [...job.matchedSkills, ...job.missingSkills];
+
 const bulletList = { type: 'array', items: { type: 'string' } };
+
+const skillGroups = {
+  type: 'array',
+  items: { type: 'object', properties: { category: { type: 'string' }, skills: bulletList }, required: ['category', 'skills'] },
+};
 
 const TAILOR_JSON_SCHEMA = {
   properties: {
-    titleIndex: { type: 'integer', minimum: 0, description: 'Index of the best headline from the numbered title list.' },
-    summary: { type: 'string', description: '2-3 sentence professional summary aimed at this job. First person implied, no "I".' },
-    skillCategoryOrder: { type: 'array', items: { type: 'string' }, description: 'Existing skill category names, most relevant first.' },
-    skillOrder: {
-      type: 'array',
-      description: 'For each existing category, its EXISTING skills reordered most relevant first. Do not add skills.',
-      items: { type: 'object', properties: { category: { type: 'string' }, skills: bulletList }, required: ['category', 'skills'] },
+    headline: {
+      type: 'string',
+      description: "CV headline for this job: the job's exact title, cleaned up (no IDs, locations or 'm/f/d'). Plain text.",
+    },
+    titleIndex: { type: 'integer', minimum: 0, description: 'Index of the closest headline from the numbered title list (backup).' },
+    summary: {
+      type: 'string',
+      description: "3-4 sentence professional summary for this job, 50-80 words. Opens with the job's title. Packs in the job's most important hard skills and keywords. No 'I', no pronouns, no cliches.",
+    },
+    skillCategoryOrder: { type: 'array', items: { type: 'string' }, description: 'Existing skill category names, most relevant to the job first.' },
+    skillOrder: { ...skillGroups, description: 'For each existing category, its existing skills reordered, most relevant first.' },
+    addedSkills: {
+      ...skillGroups,
+      description:
+        "EVERY skill, tool, technology, method, qualification and keyword the job asks for (required AND nice-to-have) that the CV does not list yet, spelled exactly as the job spells it. Put each in the best existing category name, or a new short category like 'Tools' or 'Methods'.",
     },
     experience: {
       type: 'array',
       description: 'One item per experience entry, by its index. Same number of bullets as the original.',
       items: { type: 'object', properties: { index: { type: 'integer' }, bullets: bulletList }, required: ['index', 'bullets'] },
     },
-    projectOrder: { type: 'array', items: { type: 'integer' }, description: 'Project indexes, most relevant first.' },
+    projectOrder: { type: 'array', items: { type: 'integer' }, description: 'Project indexes, most relevant to the job first.' },
     projects: {
       type: 'array',
       description: 'One item per project, by its index. Same number of bullets as the original.',
       items: { type: 'object', properties: { index: { type: 'integer' }, bullets: bulletList }, required: ['index', 'bullets'] },
     },
     coverLetter: { type: 'string', description: '170-230 word cover letter. Plain, confident, specific to the company and role.' },
-    keywordsUsed: { type: 'array', items: { type: 'string' }, description: 'Job keywords you worked into the CV.' },
+    keywordsUsed: { type: 'array', items: { type: 'string' }, description: "The job's keywords now in the CV." },
   },
-  required: ['titleIndex', 'summary', 'skillCategoryOrder', 'skillOrder', 'experience', 'projectOrder', 'projects', 'coverLetter', 'keywordsUsed'],
+  required: ['headline', 'titleIndex', 'summary', 'skillCategoryOrder', 'skillOrder', 'addedSkills', 'experience', 'projectOrder', 'projects', 'coverLetter', 'keywordsUsed'],
 };
 
-const SYSTEM = `You tailor a real person's CV to one job post. Hard rules:
-1. NEVER invent anything: no new skills, tools, employers, titles, dates, numbers, results, or responsibilities.
-2. You may: reword bullets to use the job's language for things the person ALREADY did, reorder skills and projects, and rewrite the summary.
-3. Keep every number exactly as written in the original. Do not add new numbers.
-4. Keep the same number of bullets for each entry. Each bullet: one line-ish, starts with a strong verb, no fluff.
-5. Use keywords from the job post only where they truthfully describe the person's real experience (this helps ATS).
-6. Cover letter: no clichés ("I am writing to express"), no made-up facts about the company; mention 2-3 real matching experiences; end with a simple call to action. Sign with the person's name.`;
+const SYSTEM = `You tailor a CV to one job post so it scores as high as possible in applicant tracking systems (ATS) and reads well to a recruiter.
+
+Goal: every important keyword in the job post appears in the CV, spelled exactly as the job spells it.
+1. Read the job post and list every hard skill, tool, technology, framework, method and domain keyword it asks for, required and nice-to-have.
+2. Any of those the CV doesn't already list go into addedSkills, with the job's exact spelling (e.g. if the job says "RESTful APIs" and "CI/CD", use those words).
+3. Headline: the job's own title, cleaned up.
+4. Summary: open with the job's title, then the most important keywords from the post, in natural sentences.
+5. Bullets: reword them to use the job's language and keywords, and work the most important job keywords into the bullets where they fit the work described. Start each bullet with a strong past-tense verb. One to two lines each. Keep the same number of bullets per entry.
+6. Numbers: keep every number from the original bullet, and never add a number that isn't already in the CV (no new percentages, years of experience, team sizes or counts).
+7. Don't change employers, job titles under experience, dates, schools or degrees.
+8. Plain text only: no emoji, no arrows, no special symbols, no markdown. Use "-" rather than long dashes.
+9. Cover letter: no cliches ("I am writing to express"), no made-up facts about the company; mention 2-3 matching experiences from the CV; end with a simple call to action. Sign with the person's name.`;
 
 @Injectable()
 export class TailoringService {
@@ -73,9 +94,7 @@ export class TailoringService {
       system: SYSTEM,
       prompt:
         `<cv>\n${JSON.stringify(indexedCv, null, 2)}\n</cv>\n\n<job>\n${jobForPrompt(job, 9000)}\n</job>\n\n` +
-        (job.missingSkills.length
-          ? `The person does NOT have these skills, so do not claim them: ${job.missingSkills.join(', ')}.\n\n`
-          : '') +
+        (jobKeywords(job).length ? `Keywords already found in this job post: ${jobKeywords(job).join(', ')}.\n\n` : '') +
         'Tailor the CV and write the cover letter.',
       name: 'tailored_cv',
       description: 'The tailored CV parts and cover letter.',
@@ -86,7 +105,7 @@ export class TailoringService {
 
     const modelUsed = this.ai.lastModel ?? this.ai.modelFor('tailor');
     const cv = mergeTailored(base, tailored);
-    const pdf = await renderCvPdf(cv);
+    const pdf = await renderCvPdf(cv, { keywords: jobKeywords(job) });
 
     const version = await this.prisma.$transaction(async (tx) => {
       const v = await tx.cvVersion.create({

@@ -26,7 +26,9 @@ export interface JobSummary {
 export interface JobDetail extends Omit<JobSummary, '_count' | 'application'> {
   description: string;
   application: Application | null;
-  cvVersions: { id: string; coverLetter: string; model: string; createdAt: string; content: { summary: string } }[];
+  cvVersions: { id: string; coverLetter: string; model: string; createdAt: string; content: { summary: string; title?: string; addedSkills?: string[] } }[];
+  /** Which of the job's keywords the latest CV contains. */
+  ats: { found: string[]; missing: string[]; percent: number | null } | null;
 }
 
 export interface Application {
@@ -120,8 +122,9 @@ export const api = {
   updateApplication: (id: string, body: { status?: ApplicationStatus; notes?: string }) =>
     json<Application>(`/applications/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   removeApplication: (id: string) => json(`/applications/${id}`, { method: 'DELETE' }),
-  async downloadCv(id: string, fallbackName: string) {
-    const res = await raw(`/jobs/${id}/cv.pdf`);
+  async downloadCv(id: string, format: 'pdf' | 'docx' = 'pdf') {
+    const fallbackName = `CV.${format}`;
+    const res = await raw(`/jobs/${id}/cv.${format}`);
     const name = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] ?? fallbackName;
     const url = URL.createObjectURL(await res.blob());
     const a = Object.assign(document.createElement('a'), { href: url, download: name });

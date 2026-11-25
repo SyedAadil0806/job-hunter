@@ -1,7 +1,11 @@
 import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Res } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Response } from 'express';
-import { TailoringService } from '../ai/tailoring.service';
+import { jobKeywords, TailoringService } from '../ai/tailoring.service';
+import { keywordCoverage } from '../cv/ats';
+import { CvSchema } from '../cv/cv.schema';
+import { renderCvDocx } from '../cv/docx.renderer';
+import { renderCvPdf } from '../cv/pdf.renderer';
 import { Public } from '../auth/token.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { SOURCE_LABELS } from '../sources';
@@ -103,7 +107,10 @@ export class JobsController {
       },
     });
     if (!job) throw new NotFoundException('Job not found');
-    return job;
+    const latest = job.cvVersions[0];
+    const parsed = latest ? CvSchema.safeParse(latest.content) : undefined;
+    const ats = parsed?.success ? keywordCoverage(parsed.data, jobKeywords(job)) : null;
+    return { ...job, ats };
   }
 
   /** Make (or remake) a tailored CV for this job right now. */
@@ -115,16 +122,38 @@ export class JobsController {
 
   @Get('jobs/:id/cv.pdf')
   async pdf(@Param('id') id: string, @Res() res: Response) {
+    await this.sendCv(id, 'pdf', res);
+  }
+
+  @Get('jobs/:id/cv.docx')
+  async docx(@Param('id') id: string, @Res() res: Response) {
+    await this.sendCv(id, 'docx', res);
+  }
+
+  /**
+   * Rendered fresh from the stored CV data each time, so layout fixes reach CVs
+   * made before them. Falls back to the stored PDF if old data no longer parses.
+   */
+  private async sendCv(id: string, format: 'pdf' | 'docx', res: Response) {
     const v = await this.prisma.cvVersion.findFirst({
       where: { jobId: id },
       orderBy: { createdAt: 'desc' },
-      include: { job: { select: { company: true } } },
+      include: { job: { select: { company: true, matchedSkills: true, missingSkills: true } } },
     });
     if (!v) throw new NotFoundException('No tailored CV for this job yet');
-    const name = (v.content as { name?: string }).name ?? 'CV';
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeName(name)} - ${safeName(v.job.company)} - CV.pdf"`);
-    res.send(Buffer.from(v.pdf));
+    const parsed = CvSchema.safeParse(v.content);
+    const keywords = jobKeywords(v.job);
+    let file: Buffer;
+    if (parsed.success) file = format === 'pdf' ? await renderCvPdf(parsed.data, { keywords }) : await renderCvDocx(parsed.data, { keywords });
+    else if (format === 'pdf') file = Buffer.from(v.pdf);
+    else throw new NotFoundException('This CV is too old for Word. Remake it first.');
+    const name = parsed.success ? parsed.data.name : ((v.content as { name?: string }).name ?? 'CV');
+    res.setHeader(
+      'Content-Type',
+      format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName(name)} - ${safeName(v.job.company)} - CV.${format}"`);
+    res.send(file);
   }
 
   @Post('jobs/:id/skip')

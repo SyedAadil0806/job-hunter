@@ -19,8 +19,8 @@ const SCORE_JSON_SCHEMA = {
   properties: {
     score: { type: 'integer', minimum: 0, maximum: 100, description: 'How good a fit this job is for the candidate.' },
     reason: { type: 'string', description: 'One or two plain sentences explaining the score.' },
-    matchedSkills: { type: 'array', items: { type: 'string' }, description: 'Skills the job wants that the candidate has.' },
-    missingSkills: { type: 'array', items: { type: 'string' }, description: 'Important skills the job wants that the candidate lacks.' },
+    matchedSkills: { type: 'array', items: { type: 'string' }, description: 'Every skill, tool, technology and keyword the job asks for that the candidate has, spelled as in the job post.' },
+    missingSkills: { type: 'array', items: { type: 'string' }, description: 'Every skill, tool, technology and keyword the job asks for that the candidate lacks, spelled as in the job post.' },
     redFlags: {
       type: 'array',
       items: { type: 'string' },

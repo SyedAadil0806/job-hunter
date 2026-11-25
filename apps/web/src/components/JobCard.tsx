@@ -85,7 +85,7 @@ export function JobCard({ job, sourceLabel, onOpen, onChange }: Props) {
 
       <div className="actions">
         {hasCv ? (
-          <button className="btn" disabled={!!busy} onClick={() => run('download', () => api.downloadCv(job.id, 'CV.pdf'))}>
+          <button className="btn" disabled={!!busy} onClick={() => run('download', () => api.downloadCv(job.id, 'pdf'))}>
             {busy === 'download' ? 'Downloading…' : 'Download CV'}
           </button>
         ) : (

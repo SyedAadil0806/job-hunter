@@ -83,14 +83,33 @@ export function JobDrawer({ id, sourceLabel, onClose, onChange }: Props) {
                   <button className="btn" onClick={copy}>
                     {copied ? 'Copied ✓' : 'Copy cover letter'}
                   </button>
-                  <button className="btn ghost" onClick={() => api.downloadCv(job.id, 'CV.pdf').catch((e) => setError(e.message))}>
-                    Download CV
+                  <button className="btn ghost" onClick={() => api.downloadCv(job.id, 'pdf').catch((e) => setError(e.message))}>
+                    CV (PDF)
+                  </button>
+                  <button className="btn ghost" onClick={() => api.downloadCv(job.id, 'docx').catch((e) => setError(e.message))}>
+                    CV (Word)
                   </button>
                   <button className="btn ghost" disabled={busy} onClick={remake}>
                     {busy ? 'Remaking…' : 'Remake CV'}
                   </button>
                 </div>
+                {job.ats?.percent != null && (
+                  <>
+                    <h4>ATS keywords: {job.ats.percent}%</h4>
+                    <p className="muted">
+                      {job.ats.found.length} of {job.ats.found.length + job.ats.missing.length} job keywords are in the CV
+                      {job.ats.missing.length ? `. Not in it: ${job.ats.missing.join(', ')}` : ''}.
+                    </p>
+                  </>
+                )}
+                {!!latest.content.addedSkills?.length && (
+                  <>
+                    <h4>Added for this job</h4>
+                    <p className="muted">Be ready to talk about these: {latest.content.addedSkills.join(', ')}.</p>
+                  </>
+                )}
                 <h4>Tailored summary</h4>
+                {latest.content.title && <p><strong>{latest.content.title}</strong></p>}
                 <p>{latest.content.summary}</p>
               </>
             ) : (

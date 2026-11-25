@@ -4,7 +4,7 @@ A personal job search system that runs itself. Twice a day it finds new jobs, sc
 
 Built for one person, and used for my own job search in the UAE.
 
-**Stack:** TypeScript · NestJS 11 · Prisma 6 · PostgreSQL · React 19 + Vite · Gemini / Claude APIs · PDFKit · GitHub Actions · Render · Vercel
+**Stack:** TypeScript · NestJS 11 · Prisma 6 · PostgreSQL · React 19 + Vite · Gemini / Claude APIs · PDFKit · docx · GitHub Actions · Render · Vercel
 
 ## How it works
 
@@ -25,21 +25,33 @@ flowchart LR
 2. **Filter:** cheap rules run first, so AI is only used on jobs that could fit. Jobs inside the UAE can be on-site, hybrid or remote. Jobs elsewhere must be truly remote.
 3. **Check links:** closed and old jobs are removed. If a site blocks the check, the job gets a visible warning instead of being dropped.
 4. **Score:** AI gives each job a score from 0 to 100, with matching skills, missing skills and red flags.
-5. **Tailor:** jobs scoring 70 or more get a tailored CV as an ATS-friendly PDF, plus a cover letter.
+5. **Tailor:** every job scoring 70 or more gets a tailored, ATS-friendly CV (PDF and Word) and a cover letter.
 6. **Apply and track:** I apply by hand, then track each application from applied through to offer or rejection.
 
 **It never submits applications by itself.** Application forms differ for every company, many have CAPTCHAs, and job sites ban bots. A person checking each one also keeps quality high.
 
 ## Engineering decisions
 
-### The AI can't invent facts
+### CVs built to pass ATS
 
-A prompt alone can't guarantee honesty on a CV, so the code enforces it after every AI reply ([`tailor.merge.ts`](apps/api/src/cv/tailor.merge.ts), with tests):
+Every job that scores 70 or more gets its own CV, as a PDF and a Word file. The tailoring step aims for full keyword coverage:
 
-- **Titles:** the AI picks from a list of approved titles by number. It can't write a new one.
-- **Skills:** they can only be reordered. Anything not already in the CV is dropped, and nothing real is removed.
-- **Bullets:** if a reworded bullet contains a number that wasn't in the original, the original is used instead. This blocks made-up metrics.
-- **Summary:** it's replaced with the original if it contains a number found nowhere in the CV.
+- **Keywords:** every skill, tool and keyword the job post asks for goes into the CV, spelled the way the job spells it ("RESTful APIs", "CI/CD"). Skills the base CV didn't list are added and shown in the dashboard under "Added for this job", so you know what to prepare for the interview.
+- **Headline:** the job's own title.
+- **Summary and bullets:** reworded in the job's language.
+- **Coverage check:** [`ats.ts`](apps/api/src/cv/ats.ts) reads the finished CV as plain text and reports what share of the job's keywords it contains, treating common spellings as the same ("React.js" = "React").
+
+A few limits are enforced in code ([`tailor.merge.ts`](apps/api/src/cv/tailor.merge.ts), with tests), because they are the claims that get checked: no number that isn't already in the CV (so no made-up percentages or years of experience), every number in an original bullet is kept, and employers, roles, dates and education never change.
+
+### A layout ATS parsers read correctly
+
+[`cv.layout.ts`](apps/api/src/cv/cv.layout.ts) turns the CV into one ordered list that both the PDF and the Word renderer draw, so the two files always match:
+
+- **One column, read top to bottom.** Dates are never right-aligned beside a title: many parsers read those first and attach them to the wrong job. Each entry is the title, then "Company | Location | Dates", then bullets.
+- **Standard section names:** Professional Summary, Skills, Work Experience, Projects, Education.
+- **Plain text only:** no tables, columns, images, text boxes, headers or footers, and no letter-spacing. Long dashes, curly quotes and symbols become plain ones, and emoji are dropped.
+- **Word file too:** some ATS parse .docx more reliably than PDF. It uses real Word bullets and Heading 1 for sections.
+- **Always current:** downloads are rendered from the stored CV data each time, so layout fixes also reach CVs made earlier.
 
 ### Free services that fail safely
 
@@ -73,7 +85,7 @@ apps/api            NestJS API and the pipeline
   src/sources       one class per job site
   src/jobs          filter rules, collector, link checks, REST endpoints
   src/ai            model switching, scoring, tailoring
-  src/cv            CV schema, safe merge, PDF renderer
+  src/cv            CV schema, merge rules, ATS layout, PDF and Word renderers, keyword check
   src/pipeline      run orchestration, Telegram message, Run now
   prisma            database schema
 apps/web            React dashboard, installable as a web app

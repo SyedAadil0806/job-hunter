@@ -23,8 +23,8 @@ export const SearchConfigSchema = z.object({
   limits: z.object({
     /** Max jobs scored by the AI per run (controls cost / free quota). */
     maxScorePerRun: z.number().int().positive().default(60),
-    /** Max CVs tailored per run (controls cost). */
-    maxTailorPerRun: z.number().int().nonnegative().default(10),
+    /** Max CVs tailored per run. Set it as high as maxScorePerRun so every good job gets a CV; leftovers wait for the next run. */
+    maxTailorPerRun: z.number().int().nonnegative().default(60),
     /** Only tailor jobs with at least this score (0-100). */
     minScoreToTailor: z.number().int().min(0).max(100).default(70),
     /** Drop jobs posted more than this many days ago. */
